@@ -1,0 +1,229 @@
+clc
+%STEP-01
+% Intrinsic parameters
+au = 557.0943; av = 712.9824;
+u0 = 326.3819; v0 = 298.6679;
+% Location of the world reference frame in camera coordinates in mm
+Tx = 100; Ty = 0; Tz = 1500;
+% World rotation w.r.t. camera coordinates
+% Euler XYX1 angles
+Phix = 0.8*pi/2;
+Phiy = -1.8*pi/2;
+Phix1 = pi/5;
+% Image size: 640x480
+
+%STEP-02
+gamma=0;
+%Camera intrinsic matrix k
+K=[au gamma u0;0 av v0;0 0 1];
+cRw=rotx(Phix)*roty(Phiy)*rotz(Phix1);
+ctw=[Tx;Ty;Tz];
+%Extrinsic camera transformation matrix cTw
+cTw=[cRw ctw; 0 0 0 1];
+I=[1 0 0 0;0 1 0 0; 0 0 1 0];
+%Camera projection matrix
+P=K*I*cTw;
+
+%STEP-03
+%Setting random 6 set 3D points in the range[-480:480;-480:480;-480:480]
+points_3d=zeros(4,6);
+for i=1:3
+    points_3d(i,:)=-480+rand(1,6)*(480-(-480));
+end
+points_3d(4,:)=ones(1,6);
+
+%STEP-04
+%2d points calculation
+points_2d=get_2D_points(P,points_3d);
+
+%STEP-05
+%Plotting 3D points and projected 2D points on the image plane
+figure;
+scatter3(points_3d(1,:),points_3d(2,:),points_3d(3,:),'o','MarkerFaceColor','r');
+xlabel('X-axis');
+ylabel('Y-axis');
+zlabel('Z-axis');
+title('6 set of random 3D points')
+figure;
+scatter(points_2d(1,:),points_2d(2,:),'o','MarkerFaceColor','r');
+xlabel('X-axis');
+ylabel('Y-axis');
+xlim([0 640]);
+ylim([0 480]);
+title('Projected 2D points on image plane');
+
+%STEP-06
+%Computation of projection matrix with hall method from 6 set of 3D and calculated 2D points
+P1=get_projection_matrix_from_2D_3D_points_by_Hall_Method(points_2d,points_3d);
+
+%STEP-07
+%Extracting Intrinsic parameter K and rotation cRW from Projection matrix
+[K1,cRw1] = get_intrinsics_from_proj_matrix(P1);
+
+%STEP-08
+%Adding gaussian noise with 2D points
+sz=size(points_2d);
+r = normrnd(0,0.5,sz);
+Gaussian_2d_points=points_2d+r;
+
+%Calculating projection matrix from noisy 2D points
+P2=get_projection_matrix_from_2D_3D_points_by_Hall_Method(Gaussian_2d_points,points_3d);
+
+%Extracting K and cRW from just computed Projection matrix
+[K2,cRw2] = get_intrinsics_from_proj_matrix(P2);
+
+%STEP-09
+%Computing 2D points from computed projection matrix from step-8
+gaussian_2d_points=get_2D_points(P2,points_3d);
+
+%Computing average projection error to compare projected 2d points
+avg_err=get_average_projection_error(points_2d,gaussian_2d_points);
+
+%STEP-10
+%Increasing random 3D points up to 10 points 
+points3D_for_10=zeros(4,10);
+for i=1:3
+    points3D_for_10(i,:)=-480+rand(1,10)*(480-(-480));
+end
+points3D_for_10(4,:)=ones(1,10);
+
+%Repeating step 8 and 9 for the 10 points
+points2D_for_10=get_2D_points(P,points3D_for_10);
+
+%Adding gaussian noise with 2D points
+sz=size(points2D_for_10);
+r = normrnd(0,0.5,sz);
+Gaussian2D_for10=points2D_for_10+r;
+
+%Calculating projection matrix from noisy 2D points
+P3=get_projection_matrix_from_2D_3D_points_by_Hall_Method(Gaussian2D_for10,points3D_for_10);
+
+%Extracting K and cRW from just computed Projection matrix
+[K3,cRw3] = get_intrinsics_from_proj_matrix(P3);
+
+%Projected 2D points with P3
+points2D_new=get_2D_points(P3,points3D_for_10);
+
+%Computing average projection error to compare projected 2d points
+avg_err_1=get_average_projection_error(points2D_for_10,points2D_new);
+
+
+
+%Repeating the process with increasing no of points
+%Increasing random 3D points up to 20 points
+points3D_for_20=zeros(4,20);
+for i=1:3
+    points3D_for_20(i,:)=-480+rand(1,20)*(480-(-480));
+end
+points3D_for_20(4,:)=ones(1,20);
+
+%Repeating step 8 and 9 for the 10 points
+points2D_for_20=get_2D_points(P,points3D_for_20);
+
+%Adding gaussian noise with 2D points
+sz=size(points2D_for_20);
+r = normrnd(0,0.5,sz);
+Gaussian2D_for20=points2D_for_20+r;
+
+%Calculating projection matrix from noisy 2D points
+P4=get_projection_matrix_from_2D_3D_points_by_Hall_Method(Gaussian2D_for20,points3D_for_20);
+
+%Extracting K and cRW from just computed Projection matrix
+[K4,cRw4] = get_intrinsics_from_proj_matrix(P4);
+%Projected 2D points with P4
+points2D_new20=get_2D_points(P4,points3D_for_20);
+
+%Computing average projection error to compare projected 2d points
+avg_err_2=get_average_projection_error(points2D_for_20,points2D_new20);
+
+%increasing random 3D points up to 30 points
+points3D_for_30=zeros(4,30);
+for i=1:3
+    points3D_for_30(i,:)=-480+rand(1,30)*(480-(-480));
+end
+points3D_for_30(4,:)=ones(1,30);
+
+%Repeating step 8 and 9 for the 10 points
+points2D_for_30=get_2D_points(P,points3D_for_30);
+
+%Adding gaussian noise with 2D points
+sz=size(points2D_for_30);
+r = normrnd(0,0.5,sz);
+Gaussian2D_for30=points2D_for_30+r;
+
+%Calculating projection matrix from noisy 2D points
+P5=get_projection_matrix_from_2D_3D_points_by_Hall_Method(Gaussian2D_for30,points3D_for_30);
+
+%Extracting K and cRW from just computed Projection matrix
+[K5,cRw5] = get_intrinsics_from_proj_matrix(P5);
+%Projected 2D points with P5
+points2D_new30=get_2D_points(P5,points3D_for_30);
+
+%Computing average projection error to compare projected 2d points
+avg_err_3=get_average_projection_error(points2D_for_30,points2D_new30);
+
+
+%Increasing random 3D points up to 40 points
+points3D_for_40=zeros(4,40);
+for i=1:3
+    points3D_for_40(i,:)=-480+rand(1,40)*(480-(-480));
+end
+points3D_for_40(4,:)=ones(1,40);
+
+%Repeating step 8 and 9 for the 10 points
+points2D_for_40=get_2D_points(P,points3D_for_40);
+
+%Adding gaussian noise with 2D points
+sz=size(points2D_for_40);
+r = normrnd(0,0.5,sz);
+Gaussian2D_for40=points2D_for_40+r;
+
+%Calculating projection matrix from noisy 2D points
+P6=get_projection_matrix_from_2D_3D_points_by_Hall_Method(Gaussian2D_for40,points3D_for_40);
+
+%Extracting K and cRW from just computed Projection matrix
+[K6,cRw6] = get_intrinsics_from_proj_matrix(P6);
+%Projected 2D points with P5
+points2D_new40=get_2D_points(P6,points3D_for_40);
+
+%Computing average projection error to compare projected 2d points
+avg_err_4=get_average_projection_error(points2D_for_40,points2D_new40);
+
+%Increasing random 3D points up to 50 points
+points3D_for_50=zeros(4,50);
+for i=1:3
+    points3D_for_50(i,:)=-480+rand(1,50)*(480-(-480));
+end
+points3D_for_50(4,:)=ones(1,50);
+
+%Repeating step 8 and 9 for the 10 points
+points2D_for_50=get_2D_points(P,points3D_for_50);
+
+%Adding gaussian noise with 2D points
+sz=size(points2D_for_50);
+r = normrnd(0,0.5,sz);
+Gaussian2D_for50=points2D_for_50+r;
+
+%Calculating projection matrix from noisy 2D points
+P7=get_projection_matrix_from_2D_3D_points_by_Hall_Method(Gaussian2D_for50,points3D_for_50);
+
+%Extracting K and cRW from just computed Projection matrix
+[K7,cRw7] = get_intrinsics_from_proj_matrix(P7);
+%Projected 2D points with P5
+points2D_new50=get_2D_points(P7,points3D_for_50);
+
+%cCmputing average projection error to compare projected 2d points
+avg_err_5=get_average_projection_error(points2D_for_50,points2D_new50);
+
+figure;
+x=[6 10 20 30 40 50];
+y=[avg_err avg_err_1 avg_err_2 avg_err_3 avg_err_4 avg_err_5];
+plot(x,y,'-o');
+xlabel('No of points');
+ylabel('Average Projection Error');
+title('Average projection error as a function of number of points');
+
+
+
+
+
